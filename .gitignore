@@ -1,0 +1,63 @@
+# --- secrets: never commit anything in these shapes -------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+secrets.json
+credentials.json
+.anthropic
+.claude/settings.local.json
+
+# --- dependencies & build output --------------------------------------------
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# --- test & tool artifacts (may capture the webcam — keep out of the repo) ---
+.playwright-mcp/
+playwright-report/
+test-results/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.mov
+!docs/**/*.png
+
+# --- local data: client notes and ingested material must never be published --
+data/**
+!data/sample/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Unreal Engine (P0 direction) -------------------------------------------
+# Generated, machine-specific, or enormous. Only Config/, Content/ and the
+# .uproject belong in version control.
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+.idea/
+*.sln
+*.xcworkspace/
+*.VC.db
+*.opensdf
+*.sdf
+
+# --- Blender ----------------------------------------------------------------
+*.blend1
+*.blend2
+
+# --- macOS ------------------------------------------------------------------
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
