@@ -121,6 +121,52 @@ but it's worth nothing until P0 makes the thing look credible.
 
 ---
 
+## The store — where it actually stands (2026-08-12)
+
+**The old gate is cleared.** "Do not start listing products before Etsy's AI
+policy, the API automation terms, and the image-generator terms are answered" —
+all three are answered. See [`etsy-printify-operating-rules.md`](etsy-printify-operating-rules.md)
+and [`image-generation-rights.md`](image-generation-rights.md).
+
+**Built:** the deterministic core in [`factory/`](../factory/README.md) — write
+ledger, adaptive rate limiter, Etsy OAuth refresh loop, guards. 54 tests, no
+build step, no native dependencies.
+
+### The new gate: trademark screening
+
+**No product carrying a word, name, or slogan ships until KILN can run a real
+trademark screen.** This is now the top blocker, and it is a research task
+before it is a build task: what can actually be called? USPTO TESS/TSDR, EUIPO,
+WIPO Global Brand Database, and the commercial vendors all need evaluating for
+coverage, cost, and API access.
+
+It is the top blocker because it guards the only risk **nobody indemnifies** —
+every image provider's IP indemnity excludes trademark claims arising from
+selling merchandise, and trademark is what the Schedule A machine runs on.
+
+### Next in the core
+
+1. **Printify client** — product creation and the publish path. The single
+   guarded write in the system.
+2. **Etsy read client** — orders, transactions, and attaching the production
+   partner plus shipping-from to listings Printify created. **No listing
+   creation, ever.**
+3. **MCP server** — exposes the above so OpenClaw, Hermes and Claude Code can
+   all drive the same core.
+
+### Two design questions the research opened
+
+- **KILN needs a human creative stage.** Prompt-only output is not
+  copyrightable, so it is undefendable against copycats. What does that stage
+  actually look like in Josh's hands — editing, composition, his own drawn
+  elements? It is a workflow decision, not a code one.
+- **Ask Etsy in writing** whether the ML/analytics clause reaches our own
+  first-party shop data. The terms offer written authorisation as the escape
+  hatch, and the answer constrains how much of our own order history an agent
+  may reason over.
+
+---
+
 ## Later / nice to have
 
 - **Recording mode** — hide all UI chrome for clean vertical video capture for social.
