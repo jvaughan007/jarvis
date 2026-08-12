@@ -1,0 +1,19 @@
+{
+  "name": "jarvis-factory",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic core for the agent factory: store operations that must be idempotent, rate-limit-aware and auditable. Exposed to agents over MCP.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.0"
+  }
+}

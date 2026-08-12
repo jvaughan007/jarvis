@@ -59,10 +59,22 @@ must NOT be imitated.
 `trend-detection`, `competitive-landscape` (measures the *gap*, never copies the
 work).
 
+> ⚠️ **QUARRY may not source research from the Etsy API.** Etsy's API Terms §5
+> prohibit requesting Etsy content "for purposes of analytics, machine learning,
+> training artificial intelligence models... unless expressly authorized in
+> writing by Etsy," alongside a broad anti-scraping clause. An Etsy-API demand
+> scraper — which is essentially what the reference build's research agent is —
+> is squarely inside the prohibited purpose.
+>
+> **So QUARRY works off-Etsy:** public search-trend data, keyword tools holding
+> their own licences, social signal, seasonal calendars, and our own first-party
+> Printify and payment history. This is a rewrite of its brief, not a tweak.
+> See `docs/etsy-printify-operating-rules.md`.
+
 > ⚠️ The reference build has its research agent "steal these designs" from
 > top sellers. **QUARRY is built to do the opposite**: it reports on demand and
 > whitespace, and its output explicitly forbids derivative work. See
-> `docs/etsy-compliance.md` (pending research) for why this is non-negotiable.
+> `docs/legal-risk-and-compliance.md` for why this is non-negotiable.
 
 ---
 
@@ -72,15 +84,40 @@ work).
 
 **Job.** Turns a brief into original artwork and print-ready files at correct
 specs. Generates concepts, self-critiques against a rubric, iterates, and
-submits finalists for approval. Produces mockups.
+submits finalists for approval.
 
 **Runs:** on a brief from QUARRY.
 
-**Hands to:** LEDGER (approved artwork + print files), ECHO (mockups).
+**Hands to:** LEDGER (approved artwork + print files), ECHO (mockups — Printify
+renders these server-side, so KILN does not build them).
 
 **Skills:** `design-brief-interpretation`, `image-generation-prompting`,
 `print-file-preparation` (DPI, bleed, colour space, per-product templates),
-`design-critique`, `originality-check`.
+`design-critique`, `originality-check`, `trademark-screening`.
+
+**Generation runs on Google Cloud Vertex AI**, paid tier, GA models — the only
+provider that indemnifies both the output and the training data, and the only
+strong-indemnity option a solo seller can actually buy. Midjourney is
+disqualified outright: its terms ban automated tools. See
+`docs/image-generation-rights.md`.
+
+**Three constraints that came out of the rights research:**
+
+1. **A human creative stage is mandatory, not optional.** Purely AI-generated
+   images are not copyrightable and prompts alone are legally insufficient
+   (*Thaler*, cert. denied March 2026). A prompt-only pipeline ships products
+   anyone may copy. KILN's output is a *candidate*; a design becomes an asset
+   only after substantive human editing, composition, or integration of Josh's
+   own material — and that work has to be documented, because registration
+   requires describing the human contribution.
+2. **The AI-disclosure sentence goes in the *Printify* product description**,
+   because Printify is what creates the Etsy listing and that text is what lands
+   in Etsy's description field. Adding it to the Etsy listing afterwards is a
+   second write on a record Printify believes it owns.
+3. **The trademark screen is the highest-value control in the entire system.**
+   No image provider indemnifies trademark claims arising from selling
+   merchandise — that carve-out is universal — so this risk is carried entirely
+   in-house, and it is the risk that actually destroys shops.
 
 **The approval gate.** Early on, every design goes to Josh as approve/reject —
 this is how the reference creator trained his design agent, and it is the
@@ -107,6 +144,15 @@ needing a human — a policy notice, a takedown, an unhappy customer.
 `order-monitoring`, `revenue-reporting`, `policy-compliance-check`.
 
 **Is the source of truth for the numbers on the conveyor belt in the 3D view.**
+
+> ⚠️ **LEDGER must never call Etsy's `createDraftListing` for a POD product.**
+> Printify holds the Etsy connection and its publish call creates the listing.
+> Creating one ourselves as well is the duplicate-listing footgun in this stack.
+>
+> What LEDGER *does* own on the Etsy side: attaching the registered production
+> partner to every listing Printify creates, and setting shipping-from to the
+> partner's location. Both are per-listing, buyer-facing, and required — and
+> Printify does not do them for us.
 
 ---
 

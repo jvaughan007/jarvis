@@ -193,19 +193,64 @@ These stop being style preferences and become hard constraints in the skill file
 
 ---
 
+## Nobody will insure you against the risk on this page
+
+Resolved 2026-08-12, and it belongs here rather than only in the image-rights
+notes. **Every AI image provider that offers an IP indemnity excludes trademark
+claims arising from selling merchandise.** Google Cloud's carve-out — "the
+allegation is based on a trademark-related right as a result of Customer's use
+of such Generated Output in trade or commerce" — is matched almost word for word
+by OpenAI's.
+
+So the Schedule A exposure described above is the one risk **no provider covers,
+on any tier, at any price.** Indemnity protects against the copyright question
+(what did the model train on). The trademark question — does this design carry a
+word, name, logo or character somebody owns — is carried entirely by us.
+
+**That makes KILN's trademark screen the highest-value control in the system.**
+It was already a hard gate on legal grounds. It is now also the only thing
+standing between the shop and the failure mode that actually destroys shops.
+
+## And a pure prompt-to-product design cannot be defended anyway
+
+Also resolved 2026-08-12: purely AI-generated images are **not copyrightable**,
+and prompts alone — however elaborate — do not supply enough human control.
+*Thaler v. Perlmutter* settled the human-authorship requirement and the Supreme
+Court **denied certiorari on 2 March 2026**.
+
+This undercuts the registration advice above unless the workflow changes. The
+three-month § 412 window is irrelevant if there is nothing registrable to file.
+KILN needs a genuine human creative stage — substantive editing, composition, or
+Josh's own drawn or photographed material — for a design to be an asset rather
+than something anyone may copy. Full analysis and the registration mechanics are
+in `image-generation-rights.md`.
+
+---
+
 ## Still unverified
 
-These research threads hit session limits before finishing and remain open:
+1. ~~Etsy's AI-disclosure and production-partner policy~~ — **answered**, see
+   `etsy-printify-operating-rules.md`. AI is permitted with mandatory
+   in-description disclosure; POD is permitted with the production partner
+   registered *and attached per listing*.
+2. ~~Etsy API terms on automated listing creation~~ — **answered**, and the
+   finding was a surprise: **Printify creates the Etsy listing, not us.** The
+   Etsy API also forbids using its data for analytics or ML, which forces a
+   rewrite of QUARRY.
+3. ~~Printify API limits and publishing rules~~ — **answered**. Note the 5%
+   error budget.
+4. ~~Image-generator commercial-use terms~~ — **answered**, see
+   `image-generation-rights.md`. Generate on Vertex AI, paid tier.
+5. **Automated trademark screening tooling** — still open, and now the most
+   valuable remaining thread. What can KILN actually call? USPTO's TESS/TSDR
+   APIs, EUIPO, WIPO Global Brand Database, and the commercial screening
+   vendors all need evaluating for coverage, cost and API access.
+6. **Whether Etsy's ML/analytics clause reaches our own first-party shop data.**
+   Untested. It constrains how much of our own Etsy order history an agent may
+   reason over, and the terms offer written authorisation as the escape hatch —
+   so it is worth simply asking Etsy.
 
-1. **Etsy's current AI-disclosure and production-partner policy (2026).** What
-   must be declared, and what the enforcement pattern is.
-2. **Etsy Open API v3 terms on automated listing creation** — whether
-   programmatic listing is permitted, and approval requirements.
-3. **Printify API limits and publishing rules.**
-4. **Image-generator commercial-use terms** — whether the chosen model's output
-   can be sold, and who owns it. This varies materially by provider and is a
-   real gate on the whole pipeline.
-5. **Automated trademark screening tooling** — what exists that KILN could
-   actually call.
-
-**Do not start listing products before 1, 2 and 4 are answered.**
+**The original gate — "do not start listing products before 1, 2 and 4 are
+answered" — is now satisfied.** The replacement gate is item 5: no product
+carrying text, a name, or a slogan ships until there is a real trademark screen,
+because that is the uninsured risk.
