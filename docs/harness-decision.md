@@ -134,20 +134,77 @@ you write your second checkpoint-and-resume helper.
 
 ---
 
-## ⚠️ The gap: OpenClaw and Hermes
+## OpenClaw vs Hermes — answered
 
-**Josh's actual question — OpenClaw versus Hermes — did not get answered.** That
-research agent terminated on a session limit before producing anything, and the
-report above covers the wider 2026 landscape instead. Neither OpenClaw nor
-Hermes appeared anywhere in it.
+Both are real, substantial, actively developed, and neither is disqualifying.
+They are the same species of tool: a local daemon, `SKILL.md` skills, channel
+adapters, cron, and subagents. Hermes even ships an OpenClaw importer.
 
-That absence is *weak* evidence, not a verdict: the research targeted production
-harnesses generally, so a tool could be genuinely good and simply out of frame.
+| | **OpenClaw** | **Hermes Agent** |
+|---|---|---|
+| Repo | `openclaw/openclaw` (~386k ★) | `NousResearch/hermes-agent` (~229k ★) |
+| Licence / language | MIT, TypeScript, OpenClaw Foundation | MIT, Python, Nous Research |
+| Config | `~/.openclaw/openclaw.json` (JSON5) | `~/.hermes`, CLI-driven |
+| Agents | `agents.entries.<id>` — own workspace, persona files, model, **per-agent auth in separate SQLite DBs**, per-agent tool allow/deny | subagents for parallel work |
+| Skills | `SKILL.md`, six discovery roots, per-agent allowlists, **per-skill secret injection** | `SKILL.md` (agentskills.io standard); **authors and improves its own skills from experience** |
+| Scheduling | **`openclaw automations`** — cron/interval/one-shot/event, per-agent targeting, four session lanes, **SQLite-persisted run history**, auto-disable after 10 consecutive failures | built-in cron, natural-language defined |
+| Sandboxing | **opt-in** | **seven backends** — local, Docker, SSH, Singularity, Modal, Daytona, Vercel Sandbox |
+| Providers | 40+, with failover chains and key rotation on 429 | Nous Portal, OpenRouter, OpenAI, Anthropic, custom |
+| Versioning | CalVer, multiple releases/week | **0.x**, releases every 1–2 weeks |
 
-**This matters commercially, not just technically.** Josh installs OpenClaw for
-clients. If the factory runs on OpenClaw, the demo is a live advertisement for
-the exact thing he sells, and every lesson learned is billable expertise. That
-is worth real weight against a purely technical comparison — enough that the
-question deserves a proper answer rather than a default.
+**OpenClaw's scheduler is the more serious piece of engineering for this job** —
+per-agent targeting, persisted run history, and auto-disable on repeated failure
+are all things you would otherwise build yourself.
 
-**Open until researched.**
+### ⚠️ The security caveat that matters here specifically
+
+OpenClaw's docs are candid: it assumes **"one trusted operator boundary per
+gateway (single-user, personal-assistant model)"** — explicitly *not* hostile
+multi-tenant isolation. Their stated threat model is that the assistant "can
+execute arbitrary shell commands, read/write files, access network services, and
+send messages to anyone." **Sandboxing and tool-denial are opt-in**, and
+prompt-injection-only findings without a policy bypass are classified as *not*
+vulnerabilities.
+
+That is a reasonable stance for a personal assistant. **It is a sharper risk
+here**, because this agent reads customer messages and scraped web content —
+untrusted input — while holding live Etsy and Printify credentials. If OpenClaw
+runs the store, sandboxing and tool-deny lists must be turned on deliberately,
+and credentials should go through a proxy such as `Infisical/agent-vault` rather
+than plain env vars. Hermes' Docker/Modal backends are the safer default if that
+trade bothers you.
+
+### The recommendation — and it makes the harness choice less load-bearing
+
+**Do not build the store as free-form agents on either harness.** Not a maturity
+objection — a shape objection. An Etsy store on a schedule has a hard core that
+must be **idempotent, rate-limit-aware, retryable and auditable**: OAuth refresh,
+listing creation, inventory and price sync, order → fulfilment, money-touching
+state. An LLM is the wrong executor for those. When a scheduled run half-completes
+and re-fires, you want a job row and a dedupe key — not a model re-reading a
+transcript and guessing.
+
+**Three layers:**
+
+1. **Deterministic core, in code.** Etsy client, Printify client, and the
+   order/listing state machine as ordinary code with a real datastore and
+   idempotency keys. Expose it as an **MCP server**.
+2. **Agents for judgement only.** QUARRY, KILN, ECHO earn their keep on the
+   genuinely fuzzy work — research, design prompts, listing copy, QA of
+   generated art, customer-message triage. Non-determinism is a feature there.
+3. **Harness as scheduler and front door.** OpenClaw automations wake the
+   pipeline, target the right agent, and deliver results to Slack or Telegram
+   for the approval gate.
+
+**Why this resolves the tension cleanly:** the MCP server is consumed natively by
+OpenClaw, Hermes, *and* Claude Code. So Josh can run the factory on OpenClaw —
+which is the right business call, since it makes the demo a live advertisement
+for what he installs for clients — without betting the pipeline on it. The same
+core survives if the ecosystem shifts, and OpenClaw was called something else
+entirely a year ago, so it plausibly will.
+
+**Decision: OpenClaw as scheduler and operator front door. Deterministic core as
+an MCP server. Agents for judgement only.**
+
+⚠️ **Pin the version.** CalVer with multiple releases per week, on a machine
+running a storefront — never track `@latest`.
