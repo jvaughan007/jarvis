@@ -227,6 +227,116 @@ in `image-generation-rights.md`.
 
 ---
 
+## The damages multiplier is `marks × product types`, not units sold
+
+*Added 2026-08-12.* This is the number that makes the risk concrete, and it is
+not intuitive.
+
+**15 U.S.C. § 1117(c)** statutory damages are elected **per counterfeit mark,
+per type of goods**: $1,000–$200,000 non-wilful, up to **$2,000,000 per mark if
+wilful**. § 1117(b) separately mandates treble damages plus attorney's fees for
+intentional use of a known counterfeit mark.
+
+***H-D U.S.A. v. SunFrog***, 311 F. Supp. 3d 1000 (E.D. Wis. 2018) shows the
+arithmetic on a print-on-demand operation: **$19,200,000 = $300,000 × 64
+mark-and-goods-type combinations.** SunFrog's own evidence that total infringing
+sales were under $250,000 did not reduce it.
+
+**Three designs infringing two marks across six Printify product types is
+twelve combinations before a single unit ships.** Volume of *listings* drives
+the exposure, not volume of *sales* — which is precisely the thing an automated
+pipeline scales.
+
+And § 1116(d)(1)(B)(i) attaches counterfeit status to a mark registered for
+such goods "**whether or not the person against whom relief is sought knew such
+mark was so registered.**" Innocence is not a defence. What decides whether you
+face the $2M tier is simply **whether the mark is registered in the class
+covering your product** — Class 25 (clothing), 16 (posters, stationery), 21
+(mugs, drinkware), 18 (bags). Those four classes are the axis any screening
+system should be built around.
+
+Two further doctrinal points that closed off defences POD sellers rely on:
+
+- **Disclaimers do not work, and can make it worse.** *Smack Apparel*, 550 F.3d
+  at 483–84: a disclaimer will not "disabuse consumers of a mistaken belief that
+  the Universities sponsored, endorsed or were otherwise affiliated with the
+  t-shirts," and a consumer "could believe that Smack's logo merely indicated
+  that it was a licensee." Quoting *A.T. Cross*: the addition is "an
+  aggravation, and not a justification." A line in a listing description is not
+  conspicuous, and the garment itself carries no disclaimer at all.
+- **Parody got much weaker in 2023.** *Jack Daniel's Props. v. VIP Products*,
+  599 U.S. 140: when a mark is used "as a designation of source for the
+  infringer's own goods, the *Rogers* test does not apply." A front-of-shirt
+  graphic is generally the thing being sold, so there is no cheap First
+  Amendment dismissal — just a full jury question on confusion. For a shop with
+  four figures of revenue, that is the difference between a defence and a
+  default.
+
+## Trademark screening: what can actually be built
+
+*Endpoint status verified 2026-08-12.*
+
+| Resource | Status |
+|---|---|
+| `tmsearch.uspto.gov` | Live, but an Angular app behind AWS WAF bot protection. **No public JSON API. Not scrapeable.** |
+| `api.uspto.gov/api/v1/trademarks/search` | 403 — needs an Open Data Portal API key |
+| `tsdrapi.uspto.gov/…/casestatus/sn{serial}/info.json` | 401 — live, per-serial, needs `USPTO-API-KEY` |
+| `data.uspto.gov/bulkdata` | Live — **bulk data moved here** |
+| `bulkdata.uspto.gov` | **Dead.** Any guide pointing here is stale. |
+
+**Buildable:** a local index from the bulk XML — serial, mark literal,
+international class, goods and services, status, owner — answering "is this
+exact literal live in Class 25?", plus keyed TSDR lookups for status. That is a
+real, ownable piece of infrastructure and the right shape for KILN's gate.
+
+**But it is triage, never clearance**, and the false-negative surface is why:
+
+1. **Common-law rights need no registration** — § 1125(a) claims are invisible
+   to every register.
+2. **§ 1057(c) constructive use.** Once a mark registers, its *filing date*
+   confers nationwide priority. An intent-to-use application filed today is
+   unpublished, unsearchable, and already defeats your use.
+3. **Foreign priority** — Paris Convention (6 months) and Madrid extensions
+   predate anything a US search sees.
+4. **Design marks and colour schemes** have no literal to match at all.
+5. **The legal test is likelihood of confusion on related goods**, not exact
+   string match. A Class 41 registration can still support a claim against a
+   Class 25 shirt; it simply is not *counterfeiting*.
+
+> ⚠️ **A conflict worth knowing before buying a screening service.** Per Prof.
+> Sarah Fackrell's 2025 Schedule A review, **Corsearch** — a major clearance
+> vendor — acquired "Edison IP" in 2024, which appears to operate as a finders
+> firm for prospective Schedule A plaintiffs. The clearance-search vendor
+> category now overlaps with the plaintiff-recruitment side of the same
+> litigation machine. POD-niche checkers are thin wrappers over register data;
+> treat any green light as "no obvious red flag," never as clearance.
+
+**So the gate is: automated screen narrows the field, a human signs off on
+anything bearing text, and designs carrying a word, name or slogan are the
+minority of what the shop makes rather than its staple.**
+
+## Provenance is what makes an appeal possible
+
+Etsy's listing-appeal form asks the seller to:
+
+> "Write out the individual steps you take to make, design, handpick, or source
+> your item. **List everyone involved in your business, including anyone you
+> outsource your production process to.** Upload any photos or supporting
+> documents that showcase your listing's process."
+
+Appeals are narrow — Creativity Standards removals only, after 15 July 2025, a
+90-day window, one per listing. **Without a provenance log, an appeal is a
+story. With one, it is evidence.** That is the practical argument for KILN
+retaining brief, prompts, model and version, timestamps, every human edit, the
+approver, and the screening result — over and above the copyright-registration
+argument already made above.
+
+Worth pairing with a structural control: **the generation pipeline should be
+incapable of ingesting a competitor's listing image.** Enforced in code, as an
+allowlist of provenance sources — not as a policy an agent is asked to follow.
+
+---
+
 ## Still unverified
 
 1. ~~Etsy's AI-disclosure and production-partner policy~~ — **answered**, see
@@ -241,10 +351,11 @@ in `image-generation-rights.md`.
    error budget.
 4. ~~Image-generator commercial-use terms~~ — **answered**, see
    `image-generation-rights.md`. Generate on Vertex AI, paid tier.
-5. **Automated trademark screening tooling** — still open, and now the most
-   valuable remaining thread. What can KILN actually call? USPTO's TESS/TSDR
-   APIs, EUIPO, WIPO Global Brand Database, and the commercial screening
-   vendors all need evaluating for coverage, cost and API access.
+5. ~~Automated trademark screening tooling~~ — **partly answered**; see the
+   endpoint table above. A USPTO bulk-data index plus keyed TSDR lookups is
+   buildable and is the right shape. What remains open is **EUIPO and WIPO
+   Global Brand Database coverage** for non-US marks, and whether any commercial
+   vendor is worth paying for given the Corsearch conflict noted above.
 6. **Whether Etsy's ML/analytics clause reaches our own first-party shop data.**
    Untested. It constrains how much of our own Etsy order history an agent may
    reason over, and the terms offer written authorisation as the escape hatch —

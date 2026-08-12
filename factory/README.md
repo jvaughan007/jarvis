@@ -100,15 +100,26 @@ FACTORY_MAX_WRITES=10       # per run
 FACTORY_KILL_SWITCH=/path   # if this file exists, nothing is written
 ```
 
-## What is deliberately missing
+## What is still to build
 
-**There is no Etsy listing-creation path, and there will not be one.** Printify
-holds the Etsy connection; its publish call is what creates the listing.
-Creating one ourselves as well is the duplicate-listing footgun in this stack.
-See `../docs/etsy-printify-operating-rules.md`.
+The Printify client, the Etsy client, the order/listing state machine, and the
+MCP server that exposes all of it to agents.
 
-Still to build: the Printify client, the Etsy read client, the order/listing
-state machine, and the MCP server that exposes all of it to agents.
+**Exactly one pipeline may create a given listing.** Printify's native Etsy
+connection creates listings itself; its generic API channel only locks the
+product and leaves the listing to us. Doing both is the duplicate-listing
+footgun in this stack.
+
+**The decision is the generic API channel, with the Etsy client calling
+`createDraftListing`.** Two reasons, both compliance rather than preference:
+Etsy's API has **no AI-disclosure field**, so the mandatory disclosure is free
+text that must be injected from a template and verified before publish — handing
+the description to Printify routes a legal obligation through a system with no
+concept of it. And `production_partner_ids` is settable at creation, so the
+partner is attached in the same call rather than bolted on afterwards.
+
+The client will refuse any payload missing either. See
+`../docs/etsy-printify-operating-rules.md`.
 
 ## Credentials
 

@@ -66,10 +66,16 @@ work).
 > scraper — which is essentially what the reference build's research agent is —
 > is squarely inside the prohibited purpose.
 >
-> **So QUARRY works off-Etsy:** public search-trend data, keyword tools holding
-> their own licences, social signal, seasonal calendars, and our own first-party
-> Printify and payment history. This is a rewrite of its brief, not a tweak.
-> See `docs/etsy-printify-operating-rules.md`.
+> **So QUARRY works off-Etsy** — public search-trend data, licensed keyword
+> tools, social signal, seasonal calendars, and our own first-party Printify and
+> payment history — **plus one sanctioned Etsy source it cannot fetch itself.**
+>
+> Etsy's **Marketplace Insights** (Shop Manager) gives real Etsy search data:
+> most-searched keywords, terms with high buyer interest and low listing counts,
+> 30-day trends. 15 free searches per week, unlimited on Etsy Plus. It is web-UI
+> only, **no API, human-operated by design.** Josh runs the searches; QUARRY
+> reasons over what he brings back. That division is the compliant shape, not a
+> workaround. See `docs/etsy-printify-operating-rules.md`.
 
 > ⚠️ The reference build has its research agent "steal these designs" from
 > top sellers. **QUARRY is built to do the opposite**: it reports on demand and
@@ -110,10 +116,11 @@ disqualified outright: its terms ban automated tools. See
    only after substantive human editing, composition, or integration of Josh's
    own material — and that work has to be documented, because registration
    requires describing the human contribution.
-2. **The AI-disclosure sentence goes in the *Printify* product description**,
-   because Printify is what creates the Etsy listing and that text is what lands
-   in Etsy's description field. Adding it to the Etsy listing afterwards is a
-   second write on a record Printify believes it owns.
+2. **The AI-disclosure sentence is template-injected, never model-authored.**
+   Etsy's API has no field for it — the obligation is satisfied only by free
+   text in the listing description — so a deterministic template is the only
+   thing that guarantees it is present on every listing. KILN supplies the
+   design provenance; the template supplies the sentence.
 3. **The trademark screen is the highest-value control in the entire system.**
    No image provider indemnifies trademark claims arising from selling
    merchandise — that carve-out is universal — so this risk is carried entirely
@@ -145,14 +152,23 @@ needing a human — a policy notice, a takedown, an unhappy customer.
 
 **Is the source of truth for the numbers on the conveyor belt in the 3D view.**
 
-> ⚠️ **LEDGER must never call Etsy's `createDraftListing` for a POD product.**
-> Printify holds the Etsy connection and its publish call creates the listing.
-> Creating one ourselves as well is the duplicate-listing footgun in this stack.
+> ⚠️ **Exactly one pipeline may create a given listing.** On Printify's native
+> Etsy connection, Printify creates it. On the generic API channel, we do. Doing
+> both is the duplicate-listing footgun in this stack.
 >
-> What LEDGER *does* own on the Etsy side: attaching the registered production
-> partner to every listing Printify creates, and setting shipping-from to the
-> partner's location. Both are per-listing, buyer-facing, and required — and
-> Printify does not do them for us.
+> **The decision is the generic API channel, with LEDGER calling
+> `createDraftListing`** — because Etsy has no AI-disclosure field, so the
+> disclosure is free text we must inject deterministically, and because
+> `production_partner_ids` can be set in the same call that creates the listing.
+> Handing the description to Printify means routing a legal obligation through a
+> system that has no concept of it.
+>
+> LEDGER refuses to publish a payload missing either the disclosure or the
+> production partner, and sets shipping-from to the partner's location.
+>
+> One step it cannot do: **registering the production partner has no API.**
+> `getShopProductionPartners` is GET-only, so Josh adds Printify in Shop Manager
+> once, by hand, before any of this works.
 
 ---
 

@@ -14,28 +14,46 @@ architecture, and one of them cuts a planned agent off at the knees.
 
 ## The three findings that change the plan
 
-### ① Printify creates the Etsy listing. We do not.
+### ① Who creates the Etsy listing depends on the channel type — pick one, deliberately
 
-This is the most consequential correction. Printify holds the Etsy OAuth
-connection; `POST /v1/shops/{shop_id}/products/{id}/publish.json` causes
-*Printify's* integration to create the listing on Etsy. Published products carry
-an `external_id` linking back.
+*Corrected 2026-08-12 after a third research pass. An earlier version of this
+document said flatly that Printify always creates the listing. That is true for
+one of the two connection types and false for the other, and the difference
+decides how half the core is built.*
 
-**So the write path for a POD product is Printify-only.** Calling Etsy's
-`createDraftListing` for the same product produces a duplicate listing — the
-classic footgun in this stack.
+| Connection | Who creates the Etsy listing | What `publish` does |
+|---|---|---|
+| **Native Etsy connection** | **Printify.** It holds the Etsy OAuth link and pushes `title`, `description`, `tags`, `images`, `variants` itself. | Creates the live listing on Etsy. |
+| **Generic "API" sales channel** | **We do**, through Etsy's `createDraftListing`. | Only **locks** the product. Printify's own docs: "you need to create it manually on your store from the data you can obtain from the product resource, or develop a system to automate that." |
 
-Consequences that are easy to miss:
+**Running both against the same product is the duplicate-listing footgun.** The
+decision is which single pipeline owns a listing, and it has to be made before
+the Printify client is written.
 
-- **The AI-disclosure sentence has to live in the *Printify* product
-  description**, because that is the text that lands in Etsy's `description`
-  field. Writing it into an Etsy listing after the fact is a second write on a
-  record Printify believes it owns.
-- **The Etsy production-partner assignment is Etsy-side and Printify does not
-  set it.** That step is ours — via Shop Manager or the Etsy API against the
-  listings Printify created. *(Flagged unverified — see below.)*
-- The Etsy API's role shrinks to reads, order/transaction data, and
-  post-publish listing metadata. It is not the product-creation path.
+**Recommendation: the generic API channel, with us creating the draft.** Three
+reasons, all of them compliance rather than preference:
+
+1. **Deterministic AI disclosure.** Etsy's OpenAPI spec has **no AI field at
+   all** — no `ai_generated`, no "artificial intelligence" anywhere in it. The
+   mandatory disclosure is free text in `description`. If Printify owns the
+   description, the disclosure has to survive a round trip through a system
+   that has no concept of the obligation. If we own it, we inject it from a
+   template and can refuse to publish without it.
+2. **`production_partner_ids` is settable at creation** on Etsy's
+   `createDraftListing`. Owning the call means the partner is attached in the
+   same operation, not bolted on afterwards.
+3. **Draft state is a real gate.** `createDraftListing` produces a draft;
+   draft → active is a separate `updateListing` call. That is the human
+   approval point, given to us by the API rather than invented.
+
+Either way, one step is **hard human-in-the-loop and has no API**:
+`getShopProductionPartners` is **GET-only**. A human must add Printify in Shop
+Manager → Settings → *Partners you work with*, once, before any agent can
+reference the partner id. Not a preference — there is no endpoint.
+
+Printify's other Etsy-specific surface: `sales_channel_properties` supports
+`free_shipping` and `personalisation`, and the `shipping_template` publishing
+property is "used by Etsy and Amazon sales channels only."
 
 ### ② The API Terms forbid using Etsy data for analytics or ML
 
@@ -246,9 +264,17 @@ generation is not our problem. Publish is followed by
 
 **The deterministic core (`factory/`)**
 
-- Etsy client is **read + post-publish metadata only**. No listing creation.
-- Printify client owns product creation and publish. Publish is the single
-  guarded write path.
+- **One pipeline owns a listing, and it is ours.** Printify on the generic API
+  channel for product and mockup assembly; Etsy `createDraftListing` for the
+  listing itself, so disclosure and production partner are set in the same call
+  that creates it. Never both.
+- **The AI disclosure is template-injected, never model-authored.** There is no
+  API field for it, so a deterministic template is the only guarantee it is
+  present. A listing payload without it does not publish.
+- **A listing payload with an empty `production_partner_ids` is rejected**
+  before it reaches Etsy.
+- Publish is the single guarded write path, behind the draft → human → active
+  gate.
 - Rate limiting is **header-driven and adaptive**, per provider, per key.
 - Printify's 5%-error budget means errors are tracked as a first-class metric,
   not just logged.
@@ -287,21 +313,71 @@ compliant.
 - ❌ Create extra API keys to raise the rate ceiling.
 - ❌ Double-publish through both Printify and the Etsy API.
 
+## Mockups are allowed — with a distinction that matters
+
+*Resolved 2026-08-12.* The [Listing Image Requirements](https://www.etsy.com/legal/policy/listing-image-requirements/253962679005)
+carve-out is explicit, and it is narrower than "POD is fine":
+
+> "If you create an original design (such as artwork or a pattern) that a
+> production partner **prints onto a base item** (like a t-shirt or mug), **you
+> may use a stock photo mockup** to illustrate the end product."
+
+But where a partner *manufactures* the item itself — furniture, a garment, a
+book — "use a **real photo** of the physical end product."
+
+**So: a design printed on a blank is mockup-eligible; an item made to our design
+is not.** Printify's rendered mockups are legitimate listing images for the
+printed-design-on-base-item case, which is the whole business. Do not generalise
+it further.
+
+One more, for personalised listings: **the first image must show a finished
+customised item** — never a blank, never "Your Text Here."
+
+## Demand research has a sanctioned source
+
+Also resolved: Etsy runs **Marketplace Insights** in Shop Manager — real Etsy
+search data, most-searched keywords, terms with high buyer interest and low
+listing counts, 30-day trends, competitive price and view data. **15 free
+keyword searches per week**, unlimited on Etsy Plus.
+
+**It is desktop and mobile web only, with no API — human-operated by design.**
+
+That is QUARRY's legitimate demand signal. An agent may act on what a human
+pulls; it may not pull it. Combined with the API ban on analytics and ML, the
+shape is clear: Josh runs the keyword searches, QUARRY reasons over the results
+alongside off-Etsy signal and our own first-party sales history.
+
 ## Still unverified
 
-1. **Listing Image Requirements** — 403 on both live and archive. The Creativity
-   Standards mention "limited exceptions for... items made with production
-   partner assistance," which suggests Printify-generated mockups are
-   acceptable as listing images, but the exact wording is unconfirmed. Confirm
-   before relying on vendor mockups as the only images.
-2. **Whether Printify sets any Etsy production-partner metadata.** Believed not
-   — meaning the step is entirely ours — but developers.printify.com did not
-   serve the Etsy-specific integration section.
-3. **Our actual QPS/QPD numbers**, readable only from the Developer Portal app
-   page once an app exists.
-4. **Whether the ML/analytics clause covers first-party shop data.** Untested,
-   and it constrains how much of our own Etsy data an agent may reason over.
-   Worth asking Etsy in writing — the clause offers written authorisation as
-   the escape hatch.
+1. **Our actual QPS/QPD numbers**, readable only from the Developer Portal once
+   an app exists. The docs' worked example shows `x-limit-per-second: 150` and
+   `x-limit-per-day: 100000` — an example, not an allocation, which is exactly
+   why the limiter reads the headers.
+2. **Whether the ML/analytics clause covers first-party shop data.** Untested,
+   and it constrains how much of our own Etsy order history an agent may reason
+   over. The clause offers written authorisation as the escape hatch, so the
+   answer is available simply by asking Etsy. Worth doing before LEDGER reasons
+   over order data.
+3. **Etsy's enforcement volume** — no public statistics exist on Creativity
+   Standards or AI-related removals, so there is no base rate to reason from.
 
-Item 4 is worth a real answer before LEDGER reasons over Etsy order data.
+## Smaller findings worth keeping
+
+- **Webhooks exist** for `order.paid`, `order.canceled`, `order.shipped`,
+  `order.delivered`, signed with `webhook-id` / `webhook-timestamp` /
+  `webhook-signature` over `id.timestamp.raw_body`, with retries. Push beats
+  polling for the factory's order flow and for the 3D view's live numbers.
+- **Listing enums for POD:** `who_made: someone_else` (with the partner
+  declared), `when_made: made_to_order`, `is_supply: false`, `type: physical`.
+- **Printify token lifetimes:** Personal Access Token **1 year**; OAuth access
+  tokens **6 hours** with refresh. Both need the same alerting the Etsy 90-day
+  refresh window gets.
+- **Printify requires a `User-Agent` header** on every request and **sends no
+  CORS headers** — server-side only, which suits an agent backend and rules out
+  ever calling it from the browser.
+- **Etsy publishes a read-only docs MCP server** at `https://mcp.api.etsycloud.com/mcp`,
+  no API key needed. Useful while building the integration; it does not call the
+  API.
+- **Dormancy:** an app with no successful call in six months may be suspended,
+  and listing content may not be displayed more than six hours staler than
+  Etsy's own.

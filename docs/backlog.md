@@ -135,24 +135,46 @@ build step, no native dependencies.
 ### The new gate: trademark screening
 
 **No product carrying a word, name, or slogan ships until KILN can run a real
-trademark screen.** This is now the top blocker, and it is a research task
-before it is a build task: what can actually be called? USPTO TESS/TSDR, EUIPO,
-WIPO Global Brand Database, and the commercial vendors all need evaluating for
-coverage, cost, and API access.
+trademark screen.** It guards the only risk **nobody indemnifies** — every image
+provider's IP indemnity excludes trademark claims arising from selling
+merchandise, and trademark is what the Schedule A machine runs on.
 
-It is the top blocker because it guards the only risk **nobody indemnifies** —
-every image provider's IP indemnity excludes trademark claims arising from
-selling merchandise, and trademark is what the Schedule A machine runs on.
+The shape is now known. Build a **local index from USPTO bulk data**
+(`data.uspto.gov/bulkdata` — note `bulkdata.uspto.gov` is dead) covering serial,
+mark literal, international class, goods and services, status and owner, plus
+keyed TSDR status lookups with an API key. Screen against **Classes 25, 16, 21
+and 18**. The search UI is behind bot protection and is not scrapeable.
+
+Still open: EUIPO and WIPO coverage for non-US marks.
+
+**Why it cannot be fully automated:** the legal test is likelihood of confusion
+on related goods, not string match, and common-law rights, unpublished
+intent-to-use filings, foreign priority and design marks are all invisible to
+any register. Automated screen narrows; a human signs off on anything with text
+on it.
 
 ### Next in the core
 
-1. **Printify client** — product creation and the publish path. The single
-   guarded write in the system.
-2. **Etsy read client** — orders, transactions, and attaching the production
-   partner plus shipping-from to listings Printify created. **No listing
-   creation, ever.**
-3. **MCP server** — exposes the above so OpenClaw, Hermes and Claude Code can
+1. **Decide the Printify channel type — and it is already decided.** Use the
+   generic API channel and create the Etsy listing ourselves, because Etsy has
+   no AI-disclosure field and `production_partner_ids` is settable at creation.
+   Printify's native connection would route a legal obligation through a system
+   that has no concept of it. *(This reverses an earlier note that said Printify
+   always creates the listing — true only for the native connection.)*
+2. **Printify client** — uploads, product assembly, mockups.
+3. **Etsy client** — `createDraftListing` with template-injected disclosure and
+   a non-empty `production_partner_ids`, refusing to publish without either;
+   orders and transactions; draft → active as the human gate.
+4. **MCP server** — exposes the above so OpenClaw, Hermes and Claude Code can
    all drive the same core.
+
+**One thing Josh must do by hand before any of this works:** add Printify as a
+production partner in Shop Manager → Settings → *Partners you work with*.
+`getShopProductionPartners` is GET-only — there is no API to create one.
+
+Worth wiring early: Etsy **webhooks** (`order.paid`, `order.shipped`,
+`order.canceled`, `order.delivered`, HMAC-signed) push order events instead of
+polling — which is also what the 3D factory's live numbers want.
 
 ### Two design questions the research opened
 
