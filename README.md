@@ -1,5 +1,19 @@
 # JARVIS — Josh The AI Guy
 
+> ### 👉 Start at [`docs/STATE.md`](docs/STATE.md)
+>
+> **The project pivoted on 2026-08-11** from the holographic demo described below
+> to an **agent factory** — an overhead RTS-style view where named agents visibly
+> work, backed by real autonomous businesses starting with an Etsy
+> print-on-demand store.
+>
+> `STATE.md` is the single orientation file: where things stand, what to read,
+> and what to skip. Read it before anything else. The rest of this README
+> describes the hand-tracking and voice work from the earlier concept, which
+> still runs and whose input layers survive the pivot.
+
+---
+
 A holographic 3D demo you drive with your bare hands through the webcam. Built as a
 sales asset: open the laptop at a networking table or a client meeting, pull an AI agent
 system apart in mid-air, and put it back together.
